@@ -11,14 +11,7 @@ body {
     padding: 20px;
 }
 
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    padding: 30px;
-}
+/* Removed old container styles - now using flexbox in App.jsx */
 
 h1 {
     text-align: center;
@@ -113,46 +106,240 @@ button:disabled {
 
 .game-board {
     display: grid;
-    grid-template-columns: repeat(10, 1fr);
-    gap: 2px;
-    background: #333;
-    padding: 2px;
-    border-radius: 12px;
-    margin-bottom: 30px;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
+    grid-template-columns: repeat(16, 1fr);
+    gap: 0;
+    background: #f5f5f5;
+    padding: 0;
+    border: 4px solid #333;
+    border-radius: 8px;
+    margin: 0 auto;
+    width: 700px;
+    height: 700px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    overflow: hidden;
+    position: relative;
 }
 
 .cell {
-    aspect-ratio: 1;
+    width: 100%;
+    height: 100%;
     background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 20px;
     position: relative;
-    transition: background-color 0.3s;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: 0.5px solid #e8e8e8;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
-.cell.wall {
-    background: #333;
+.cell:hover {
+    background: #f9f9ff;
 }
 
-.cell.player0 {
-    background: #4CAF50;
+/* Ricochet Robots wall borders - thicker and more visible */
+.cell.wall-north {
+    border-top: 4px solid #000;
 }
 
-.cell.player1 {
-    background: #2196F3;
+.cell.wall-south {
+    border-bottom: 4px solid #000;
 }
 
-.cell.token {
-    background: #FFD700;
+.cell.wall-west {
+    border-left: 4px solid #000;
 }
 
-.cell.path {
-    background: #E3F2FD;
+.cell.wall-east {
+    border-right: 4px solid #000;
+}
+
+/* Robot colors - NO background, just the emoji */
+.cell.robot0,
+.cell.robot1,
+.cell.robot2,
+.cell.robot3 {
+    background: #fff;
+}
+
+.cell.robot.selected {
+    background: rgba(102, 126, 234, 0.6);
+    box-shadow: inset 0 0 15px rgba(102, 126, 234, 0.9);
+    transform: scale(1.05);
+    z-index: 10;
+}
+
+.cell.target {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* Route path visualization - dotted lines */
+.cell.path-trace-horizontal,
+.cell.path-trace-vertical {
+    position: relative;
+}
+
+/* Horizontal dotted line */
+.cell.path-trace-horizontal::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    transform: translateY(-50%);
+    opacity: 0.8;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Vertical dotted line */
+.cell.path-trace-vertical::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    transform: translateX(-50%);
+    opacity: 0.8;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Robot-specific colors for paths - HORIZONTAL */
+.cell.path-trace-horizontal.robot0::before {
+    background: repeating-linear-gradient(
+        to right,
+        #ff4444 0px,
+        #ff4444 5px,
+        transparent 5px,
+        transparent 10px
+    );
+}
+
+.cell.path-trace-horizontal.robot1::before {
+    background: repeating-linear-gradient(
+        to right,
+        #22cc22 0px,
+        #22cc22 5px,
+        transparent 5px,
+        transparent 10px
+    );
+}
+
+.cell.path-trace-horizontal.robot2::before {
+    background: repeating-linear-gradient(
+        to right,
+        #4444ff 0px,
+        #4444ff 5px,
+        transparent 5px,
+        transparent 10px
+    );
+}
+
+.cell.path-trace-horizontal.robot3::before {
+    background: repeating-linear-gradient(
+        to right,
+        #ffcc00 0px,
+        #ffcc00 5px,
+        transparent 5px,
+        transparent 10px
+    );
+}
+
+/* Vertical lines */
+.cell.path-trace-vertical.robot0::before {
+    background: repeating-linear-gradient(
+        to bottom,
+        #ff4444 0px,
+        #ff4444 5px,
+        transparent 5px,
+        transparent 10px
+    );
+}
+
+.cell.path-trace-vertical.robot1::before {
+    background: repeating-linear-gradient(
+        to bottom,
+        #22cc22 0px,
+        #22cc22 5px,
+        transparent 5px,
+        transparent 10px
+    );
+}
+
+.cell.path-trace-vertical.robot2::before {
+    background: repeating-linear-gradient(
+        to bottom,
+        #4444ff 0px,
+        #4444ff 5px,
+        transparent 5px,
+        transparent 10px
+    );
+}
+
+.cell.path-trace-vertical.robot3::before {
+    background: repeating-linear-gradient(
+        to bottom,
+        #ffcc00 0px,
+        #ffcc00 5px,
+        transparent 5px,
+        transparent 10px
+    );
+}
+
+/* Original robot position (ghost/faded) - shows where robot started */
+.cell.original-robot {
+    position: relative;
+}
+
+.cell.original-robot::after {
+    content: '';
+    position: absolute;
+    top: 20%;
+    left: 20%;
+    right: 20%;
+    bottom: 20%;
+    border-radius: 50%;
+    border: 2px dashed;
+    opacity: 0.3;
+    z-index: 1;
+}
+
+.cell.original-robot.robot0::after {
+    border-color: #ff4444;
+    background: rgba(255, 68, 68, 0.1);
+}
+
+.cell.original-robot.robot1::after {
+    border-color: #22cc22;
+    background: rgba(34, 204, 34, 0.1);
+}
+
+.cell.original-robot.robot2::after {
+    border-color: #4444ff;
+    background: rgba(68, 68, 255, 0.1);
+}
+
+.cell.original-robot.robot3::after {
+    border-color: #ffcc00;
+    background: rgba(255, 204, 0, 0.1);
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
 }
 
 .game-info {
@@ -181,9 +368,16 @@ button:disabled {
 
 .route-builder {
     background: #f8f9fa;
-    padding: 20px;
+    padding: 15px;
     border-radius: 12px;
-    margin-bottom: 20px;
+}
+
+.route-history {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 12px;
+    max-height: 500px;
+    overflow-y: auto;
 }
 
 .route-builder h3 {
@@ -253,33 +447,91 @@ button:disabled {
     display: block;
 }
 
+.success-banner {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border: 2px solid #28a745;
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    color: #155724;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .legend {
     display: flex;
     justify-content: center;
-    gap: 30px;
-    margin-bottom: 20px;
+    gap: 15px;
     flex-wrap: wrap;
 }
 
 .legend-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 5px;
+    padding: 5px 10px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    font-size: 14px;
 }
 
 .legend-box {
     width: 30px;
     height: 30px;
     border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 1400px) {
+    .game-board {
+        width: 600px;
+        height: 600px;
+    }
+
+    .cell {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .game-board {
+        width: 500px;
+        height: 500px;
+    }
+
+    .cell {
+        font-size: 16px;
+    }
 }
 
 @media (max-width: 768px) {
     h1 {
-        font-size: 1.8em;
+        font-size: 1.5em !important;
     }
 
     .game-board {
-        max-width: 100%;
+        width: 90vw !important;
+        height: 90vw !important;
+        max-width: 500px !important;
+        max-height: 500px !important;
+    }
+
+    .cell {
+        font-size: 14px !important;
     }
 
     .direction-buttons {

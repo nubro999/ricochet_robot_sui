@@ -3,10 +3,10 @@
 
 export const CONFIG = {
     // 🔥 필수: 컨트랙트 배포 후 받은 Package ID를 입력하세요
-    PACKAGE_ID: '0x46a7325587747191506ac1c763ee86c65e22110127b7d1cae87d48c815134a6a',
+    PACKAGE_ID: '0x8c2a168b9884f211d1e7c2c19f40a4eba4592c738ed0b94d5c227d3700a13b1f',
     
     // 모듈 이름 (컨트랙트에서 정의한 모듈명)
-    MODULE_NAME: 'reco',
+    MODULE_NAME: 'game',
     
     // 네트워크 선택: 'mainnet', 'testnet', 'devnet'
     NETWORK: 'testnet',
