@@ -4,6 +4,7 @@ module reco::game {
     use sui::transfer;
     use std::option::{Self, Option};
     use std::vector;
+    use sui::random::{Self, Random};
 
     // Direction constants
     const DIR_UP: u8 = 8;
@@ -37,12 +38,20 @@ module reco::game {
         submitted_routes: vector<vector<u8>>, // 플레이어별 제출 경로
     }
 
-    /// 게임 생성
-    public entry fun create_game(ctx: &mut TxContext) {
-        let walls = generate_ricochet_board(); // Ricochet Robots 보드 생성
-        let robot_positions = vector[0, 15, 240, 255]; // 4개 로봇 초기 위치 (corners)
-        let target_position = 119; // 목표 위치 (center-ish)
-        let target_robot = 0; // Red robot must reach target
+    /// 게임 생성 with random robot positions and random walls
+    public entry fun create_game(r: &Random, ctx: &mut TxContext) {
+        let mut generator = random::new_generator(r, ctx);
+
+        // Generate random positions for robots
+        let robot_positions = generate_random_robot_positions(&mut generator, 16);
+
+        // Random target position (not on robot positions)
+        let target_position = generate_random_target(&mut generator, &robot_positions, 16);
+
+        // Generate random walls (15 L-walls + 8 edge walls)
+        let walls = generate_random_board(&mut generator, target_position, 16);
+
+        let target_robot = 0; // Orange robot must reach target
         let scores = vector[0, 0, 0, 0]; // 최대 4명 플레이어
         let submitted_routes = vector[
             vector::empty<u8>(),
@@ -53,7 +62,7 @@ module reco::game {
 
         let game = Game {
             id: object::new(ctx),
-            map_size: 16, // Ricochet Robots uses 16x16 board
+            map_size: 16, // 16x16 board
             walls,
             robot_positions,
             target_position,
@@ -202,8 +211,8 @@ module reco::game {
         )
     }
 
-    /// Ricochet Robots 보드 생성 (16x16 with classic wall pattern)
-    fun generate_ricochet_board(): vector<u8> {
+    /// Random board generation with 15 L-walls and 8 edge walls
+    fun generate_random_board(generator: &mut random::RandomGenerator, goal_pos: u8, map_size: u8): vector<u8> {
         let mut walls = vector::empty<u8>();
         let mut i = 0;
 
@@ -235,82 +244,105 @@ module reco::game {
             i = i + 1;
         };
 
-        // Center barrier (2x2 blocked area) - positions 119, 120, 135, 136
-        add_wall_between(&mut walls, 119, WALL_SOUTH);
-        add_wall_between(&mut walls, 119, WALL_EAST);
-        add_wall_between(&mut walls, 120, WALL_SOUTH);
-        add_wall_between(&mut walls, 120, WALL_WEST);
-        add_wall_between(&mut walls, 135, WALL_NORTH);
-        add_wall_between(&mut walls, 135, WALL_EAST);
-        add_wall_between(&mut walls, 136, WALL_NORTH);
-        add_wall_between(&mut walls, 136, WALL_WEST);
+        // Add 15 random L-shaped walls
+        let mut l_walls_added = 0;
+        while (l_walls_added < 15) {
+            // Random position (avoid edges and goal)
+            let row = random::generate_u8_in_range(generator, 1, 14);
+            let col = random::generate_u8_in_range(generator, 1, 14);
+            let pos = (row as u64) * 16 + (col as u64);
 
-        // Classic Ricochet Robots pattern - L-shaped walls matching reference image
-        // Position formula: row * 16 + col (0-indexed)
+            // Skip if goal position
+            if (pos == (goal_pos as u64)) {
+                continue
+            };
 
-        // Top-left quadrant (rows 1-3, cols 1-3)
-        add_wall_between(&mut walls, 17, WALL_SOUTH);   // pos 17: row 1, col 1
-        add_wall_between(&mut walls, 33, WALL_EAST);    // pos 33: row 2, col 1
+            // Check if position already has 4 walls (fully enclosed)
+            if (count_walls(&walls, pos) >= 4) {
+                continue
+            };
 
-        add_wall_between(&mut walls, 34, WALL_SOUTH);   // pos 34: row 2, col 2
-        add_wall_between(&mut walls, 50, WALL_EAST);    // pos 50: row 3, col 2
+            // Random L-wall direction (0=SE, 1=SW, 2=NW, 3=NE)
+            let dir = random::generate_u8_in_range(generator, 0, 3);
 
-        add_wall_between(&mut walls, 51, WALL_SOUTH);   // pos 51: row 3, col 3
-        add_wall_between(&mut walls, 67, WALL_EAST);    // pos 67: row 4, col 3
+            add_l_wall_with_rotation(&mut walls, pos, dir);
+            l_walls_added = l_walls_added + 1;
+        };
 
-        add_wall_between(&mut walls, 68, WALL_SOUTH);   // pos 68: row 4, col 4
-        add_wall_between(&mut walls, 69, WALL_EAST);    // pos 69: row 4, col 5
+        // Add 8 edge-aligned vertical walls
+        let mut edge_walls_added = 0;
+        while (edge_walls_added < 8) {
+            // Random edge (0=left, 1=right, 2=top, 3=bottom)
+            let edge = random::generate_u8_in_range(generator, 0, 3);
 
-        // Middle-left area (row 5-6)
-        add_wall_between(&mut walls, 85, WALL_SOUTH);   // pos 85: row 5, col 5
-        add_wall_between(&mut walls, 86, WALL_SOUTH);   // pos 86: row 5, col 6
+            if (edge == 0) {
+                // Left edge: column 0, random row
+                let row = random::generate_u8_in_range(generator, 1, 13);
+                add_edge_wall_vertical(&mut walls, (row as u64) * 16);
+            } else if (edge == 1) {
+                // Right edge: column 15, random row
+                let row = random::generate_u8_in_range(generator, 1, 13);
+                add_edge_wall_vertical(&mut walls, (row as u64) * 16 + 15);
+            } else if (edge == 2) {
+                // Top edge: row 0, random column
+                let col = random::generate_u8_in_range(generator, 1, 13);
+                add_edge_wall_horizontal(&mut walls, (col as u64));
+            } else {
+                // Bottom edge: row 15, random column
+                let col = random::generate_u8_in_range(generator, 1, 13);
+                add_edge_wall_horizontal(&mut walls, 240 + (col as u64));
+            };
 
-        add_wall_between(&mut walls, 102, WALL_EAST);   // pos 102: row 6, col 6
-
-        // Bottom-left quadrant (rows 9-12, cols 3-6)
-        add_wall_between(&mut walls, 147, WALL_SOUTH);  // pos 147: row 9, col 3
-        add_wall_between(&mut walls, 163, WALL_EAST);   // pos 163: row 10, col 3
-
-        add_wall_between(&mut walls, 164, WALL_SOUTH);  // pos 164: row 10, col 4
-        add_wall_between(&mut walls, 180, WALL_EAST);   // pos 180: row 11, col 4
-
-        add_wall_between(&mut walls, 181, WALL_SOUTH);  // pos 181: row 11, col 5
-        add_wall_between(&mut walls, 197, WALL_EAST);   // pos 197: row 12, col 5
-
-        add_wall_between(&mut walls, 198, WALL_SOUTH);  // pos 198: row 12, col 6
-        add_wall_between(&mut walls, 214, WALL_EAST);   // pos 214: row 13, col 6
-
-        // Top-right quadrant (rows 1-3, cols 13-14)
-        add_wall_between(&mut walls, 30, WALL_SOUTH);   // pos 30: row 1, col 14
-        add_wall_between(&mut walls, 30, WALL_EAST);    // pos 30: row 1, col 14
-
-        add_wall_between(&mut walls, 45, WALL_SOUTH);   // pos 45: row 2, col 13
-        add_wall_between(&mut walls, 61, WALL_EAST);    // pos 61: row 3, col 13
-
-        add_wall_between(&mut walls, 77, WALL_SOUTH);   // pos 77: row 4, col 13
-        add_wall_between(&mut walls, 93, WALL_EAST);    // pos 93: row 5, col 13
-
-        add_wall_between(&mut walls, 109, WALL_SOUTH);  // pos 109: row 6, col 13
-        add_wall_between(&mut walls, 125, WALL_EAST);   // pos 125: row 7, col 13
-
-        // Middle-right area
-        add_wall_between(&mut walls, 137, WALL_SOUTH);  // pos 137: row 8, col 9
-        add_wall_between(&mut walls, 138, WALL_EAST);   // pos 138: row 8, col 10
-
-        // Bottom-right quadrant (rows 9-12, cols 12-14)
-        add_wall_between(&mut walls, 156, WALL_SOUTH);  // pos 156: row 9, col 12
-        add_wall_between(&mut walls, 172, WALL_EAST);   // pos 172: row 10, col 12
-
-        add_wall_between(&mut walls, 173, WALL_SOUTH);  // pos 173: row 10, col 13
-        add_wall_between(&mut walls, 189, WALL_EAST);   // pos 189: row 11, col 13
-
-        add_wall_between(&mut walls, 205, WALL_SOUTH);  // pos 205: row 12, col 13
-        add_wall_between(&mut walls, 221, WALL_EAST);   // pos 221: row 13, col 13
-
-        add_wall_between(&mut walls, 222, WALL_SOUTH);  // pos 222: row 13, col 14
-        add_wall_between(&mut walls, 222, WALL_EAST);   // pos 222: row 13, col 14
+            edge_walls_added = edge_walls_added + 1;
+        };
 
         walls
+    }
+
+    /// Count how many walls a cell has
+    fun count_walls(walls: &vector<u8>, pos: u64): u8 {
+        let wall_bits = *vector::borrow(walls, pos);
+        let mut count = 0;
+        if ((wall_bits & WALL_NORTH) != 0) count = count + 1;
+        if ((wall_bits & WALL_SOUTH) != 0) count = count + 1;
+        if ((wall_bits & WALL_WEST) != 0) count = count + 1;
+        if ((wall_bits & WALL_EAST) != 0) count = count + 1;
+        count
+    }
+
+    /// Add L-shaped wall with rotation (0=SE, 1=SW, 2=NW, 3=NE)
+    fun add_l_wall_with_rotation(walls: &mut vector<u8>, pos: u64, direction: u8) {
+        if (direction == 0) {
+            // South-East (0°)
+            add_wall_between(walls, pos, WALL_SOUTH);
+            add_wall_between(walls, pos, WALL_EAST);
+        } else if (direction == 1) {
+            // South-West (90°)
+            add_wall_between(walls, pos, WALL_SOUTH);
+            add_wall_between(walls, pos, WALL_WEST);
+        } else if (direction == 2) {
+            // North-West (180°)
+            add_wall_between(walls, pos, WALL_NORTH);
+            add_wall_between(walls, pos, WALL_WEST);
+        } else {
+            // North-East (270°)
+            add_wall_between(walls, pos, WALL_NORTH);
+            add_wall_between(walls, pos, WALL_EAST);
+        };
+    }
+
+    /// Add vertical wall along edge (2 cells high)
+    fun add_edge_wall_vertical(walls: &mut vector<u8>, pos: u64) {
+        if (pos < 240) {
+            add_wall_between(walls, pos, WALL_SOUTH);
+        };
+    }
+
+    /// Add horizontal wall along edge (2 cells wide)
+    fun add_edge_wall_horizontal(walls: &mut vector<u8>, pos: u64) {
+        if ((pos % 16) < 15) {
+            add_wall_between(walls, pos, WALL_EAST);
+        };
     }
 
     /// Helper function to add wall and its opposite
@@ -341,6 +373,61 @@ module reco::game {
 
         let adjacent = *vector::borrow(walls, adjacent_pos);
         *vector::borrow_mut(walls, adjacent_pos) = adjacent | opposite_dir;
+    }
+
+    /// Generate random robot positions (4 robots)
+    fun generate_random_robot_positions(generator: &mut random::RandomGenerator, map_size: u8): vector<u8> {
+        let mut positions = vector::empty<u8>();
+        let max_pos = (map_size as u64) * (map_size as u64);
+
+        let mut i = 0;
+        while (i < 4) {
+            // Generate random position
+            let pos = (random::generate_u8_in_range(generator, 0, (max_pos - 1) as u8));
+
+            // Check if position is already taken
+            let mut already_taken = false;
+            let mut j = 0;
+            while (j < vector::length(&positions)) {
+                if (*vector::borrow(&positions, j) == pos) {
+                    already_taken = true;
+                    break
+                };
+                j = j + 1;
+            };
+
+            // Only add if position is unique
+            if (!already_taken) {
+                vector::push_back(&mut positions, pos);
+                i = i + 1;
+            };
+        };
+
+        positions
+    }
+
+    /// Generate random target position (not on any robot)
+    fun generate_random_target(generator: &mut random::RandomGenerator, robot_positions: &vector<u8>, map_size: u8): u8 {
+        let max_pos = (map_size as u64) * (map_size as u64);
+
+        loop {
+            let pos = random::generate_u8_in_range(generator, 0, (max_pos - 1) as u8);
+
+            // Check if position is not occupied by any robot
+            let mut occupied = false;
+            let mut i = 0;
+            while (i < vector::length(robot_positions)) {
+                if (*vector::borrow(robot_positions, i) == pos) {
+                    occupied = true;
+                    break
+                };
+                i = i + 1;
+            };
+
+            if (!occupied) {
+                return pos
+            };
+        }
     }
 
 }

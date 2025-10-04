@@ -50,6 +50,9 @@ function App() {
     const tx = new Transaction();
     tx.moveCall({
       target: `${CONFIG.PACKAGE_ID}::${CONFIG.MODULE_NAME}::create_game`,
+      arguments: [
+        tx.object('0x8') // Random object is at 0x8
+      ],
     });
 
     signAndExecuteTransaction(

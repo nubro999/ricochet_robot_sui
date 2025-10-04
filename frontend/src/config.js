@@ -3,7 +3,7 @@
 
 export const CONFIG = {
     // 🔥 필수: 컨트랙트 배포 후 받은 Package ID를 입력하세요
-    PACKAGE_ID: '0x8c2a168b9884f211d1e7c2c19f40a4eba4592c738ed0b94d5c227d3700a13b1f',
+    PACKAGE_ID: '0x6c58f410822f84c56772fdb745f5372b5e1deec8f948feab82bc635693134b65',
     
     // 모듈 이름 (컨트랙트에서 정의한 모듈명)
     MODULE_NAME: 'game',
