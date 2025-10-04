@@ -6,9 +6,21 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: url('/ocean-bg.jpg') center center / cover no-repeat fixed;
     min-height: 100vh;
     padding: 20px;
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(26, 35, 126, 0.7);
+    z-index: -1;
 }
 
 /* Removed old container styles - now using flexbox in App.jsx */
@@ -155,6 +167,22 @@ button:disabled {
 
 .cell.wall-east {
     border-right: 4px solid #000;
+}
+
+/* Black cell - when all 4 walls are present */
+.cell.wall-north.wall-south.wall-west.wall-east {
+    background: #000 !important;
+}
+
+/* Center 4x4 square - black background, completely blocked */
+.cell.center-square {
+    background: #000 !important;
+}
+
+/* Hide robots/targets inside center square */
+.cell.center-square .robot,
+.cell.center-square .target {
+    display: none;
 }
 
 /* Robot colors - NO background, just the emoji */

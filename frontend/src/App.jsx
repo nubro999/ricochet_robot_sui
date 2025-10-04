@@ -5,27 +5,44 @@ import {
   useSignAndExecuteTransaction,
   useSuiClient
 } from '@mysten/dapp-kit';
-import { Transaction } from '@mysten/sui/transactions';
 import { CONFIG } from './config';
+import {
+  simulateMovePath,
+  getRouteDisplay,
+  checkRouteSuccess,
+  getDirectionToTarget
+} from './helpers/gameHelpers';
+import {
+  createGameTransaction,
+  submitRouteTransaction,
+  loadGameFromBlockchain,
+  waitForGameCreation
+} from './helpers/suiHelpers';
+import PhaserGame from './components/PhaserGame';
+import RouteHistory from './components/RouteHistory';
+import GameControls from './components/GameControls';
+import GameInfo from './components/GameInfo';
+import SuccessBanner from './components/SuccessBanner';
 
 function App() {
   const currentAccount = useCurrentAccount();
   const suiClient = useSuiClient();
   const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
-  
+
   const [gameState, setGameState] = useState(null);
-  const [currentRoute, setCurrentRoute] = useState([]); // Format: [robotIdx, direction, robotIdx, direction, ...]
-  const [selectedRobot, setSelectedRobot] = useState(0); // Currently selected robot to move
+  const [currentRoute, setCurrentRoute] = useState([]);
+  const [selectedRobot, setSelectedRobot] = useState(0);
   const [gameObjectId, setGameObjectId] = useState('');
   const [statusMessage, setStatusMessage] = useState({ text: '', type: '' });
-  const [routeSuccess, setRouteSuccess] = useState(null); // {moves: number, robotIdx: number, position: number}
+  const [routeSuccess, setRouteSuccess] = useState(null);
 
   // Check route success whenever route or game state changes
   useEffect(() => {
-    checkRouteSuccess();
+    const success = checkRouteSuccess(gameState, currentRoute);
+    setRouteSuccess(success);
   }, [currentRoute, gameState]);
 
-  // 상태 메시지 표시
+  // Show status message
   const showStatus = (text, type) => {
     setStatusMessage({ text, type });
     if (type === 'success' || type === 'error') {
@@ -33,7 +50,7 @@ function App() {
     }
   };
 
-  // 게임 생성
+  // Create game
   const createGame = () => {
     if (!currentAccount) {
       showStatus('먼저 지갑을 연결해주세요', 'error');
@@ -47,50 +64,28 @@ function App() {
 
     showStatus('게임 생성 중...', 'info');
 
-    const tx = new Transaction();
-    tx.moveCall({
-      target: `${CONFIG.PACKAGE_ID}::${CONFIG.MODULE_NAME}::create_game`,
-      arguments: [
-        tx.object('0x8') // Random object is at 0x8
-      ],
-    });
+    const tx = createGameTransaction();
 
     signAndExecuteTransaction(
+      { transaction: tx },
       {
-        transaction: tx,
-      },
-      {
-        onSuccess: (result) => {
+        onSuccess: async (result) => {
           console.log('Transaction result:', result);
 
-          // digest를 사용해서 트랜잭션 결과 조회
-          suiClient.waitForTransaction({
-            digest: result.digest,
-            options: {
-              showEffects: true,
-              showObjectChanges: true,
-            }
-          }).then((txResult) => {
-            console.log('Transaction details:', txResult);
-            console.log('Object changes:', txResult.objectChanges);
+          try {
+            const gameId = await waitForGameCreation(suiClient, result.digest);
 
-            const createdObject = txResult.objectChanges?.find(
-              obj => obj.type === 'created' && obj.objectType.includes('game::Game')
-            );
-
-            if (createdObject) {
-              const gameId = createdObject.objectId;
+            if (gameId) {
               setGameObjectId(gameId);
               showStatus('✅ 게임이 생성되었습니다! ID: ' + gameId.slice(0, 8) + '...', 'success');
               setTimeout(() => loadGame(gameId), 2000);
             } else {
-              console.error('게임 객체를 찾을 수 없습니다. objectChanges:', txResult.objectChanges);
               showStatus('게임 객체를 찾을 수 없습니다', 'error');
             }
-          }).catch((error) => {
+          } catch (error) {
             console.error('트랜잭션 조회 오류:', error);
             showStatus('트랜잭션 조회 실패: ' + error.message, 'error');
-          });
+          }
         },
         onError: (error) => {
           console.error('게임 생성 오류:', error);
@@ -100,7 +95,7 @@ function App() {
     );
   };
 
-  // 게임 불러오기
+  // Load game
   const loadGame = async (gameId) => {
     if (!gameId) {
       showStatus('게임 ID를 입력해주세요', 'error');
@@ -109,26 +104,10 @@ function App() {
 
     try {
       showStatus('게임 불러오는 중...', 'info');
+      const state = await loadGameFromBlockchain(suiClient, gameId);
 
-      const object = await suiClient.getObject({
-        id: gameId,
-        options: { showContent: true }
-      });
-
-      console.log('Game object:', object);
-
-      if (object.data?.content?.fields) {
-        const fields = object.data.content.fields;
-        setGameState({
-          mapSize: parseInt(fields.map_size),
-          walls: fields.walls.map(w => parseInt(w)),
-          robotPositions: fields.robot_positions.map(p => parseInt(p)),
-          targetPosition: parseInt(fields.target_position),
-          targetRobot: parseInt(fields.target_robot),
-          winner: fields.winner?.fields?.vec?.[0] ? parseInt(fields.winner.fields.vec[0]) : null,
-          bestMoveCount: parseInt(fields.best_move_count),
-          scores: fields.scores.map(s => parseInt(s))
-        });
+      if (state) {
+        setGameState(state);
         showStatus('✅ 게임을 불러왔습니다!', 'success');
       } else {
         showStatus('게임 데이터를 파싱할 수 없습니다', 'error');
@@ -139,7 +118,7 @@ function App() {
     }
   };
 
-  // 경로 제출
+  // Submit route
   const submitRoute = () => {
     if (!currentAccount) {
       showStatus('먼저 지갑을 연결해주세요', 'error');
@@ -158,20 +137,10 @@ function App() {
 
     showStatus('경로 제출 중...', 'info');
 
-    const tx = new Transaction();
-    tx.moveCall({
-      target: `${CONFIG.PACKAGE_ID}::${CONFIG.MODULE_NAME}::submit_route`,
-      arguments: [
-        tx.object(gameObjectId),
-        tx.pure.u8(CONFIG.PLAYER_INDEX),
-        tx.pure.vector('u8', currentRoute)
-      ],
-    });
+    const tx = submitRouteTransaction(gameObjectId, currentRoute);
 
     signAndExecuteTransaction(
-      {
-        transaction: tx,
-      },
+      { transaction: tx },
       {
         onSuccess: (result) => {
           console.log('Submit result:', result);
@@ -187,135 +156,22 @@ function App() {
     );
   };
 
-  // Check if current route is successful
-  const checkRouteSuccess = () => {
-    if (!gameState || currentRoute.length === 0) {
-      setRouteSuccess(null);
-      return;
-    }
-
-    const { simulatedPositions } = simulateMovePath();
-    const targetRobotPos = simulatedPositions[gameState.targetRobot];
-
-    if (targetRobotPos === gameState.targetPosition) {
-      const moveCount = currentRoute.length / 2;
-      setRouteSuccess({
-        moves: moveCount,
-        robotIdx: gameState.targetRobot,
-        position: targetRobotPos
-      });
-    } else {
-      setRouteSuccess(null);
-    }
-  };
-
-  // 방향 추가 (Ricochet Robots: add robot index + direction pair)
+  // Add direction (add robot index + direction pair)
   const addDirection = (direction) => {
     const newRoute = [...currentRoute, selectedRobot, direction];
     setCurrentRoute(newRoute);
   };
 
-  // 경로 되돌리기 (remove last pair: robot + direction)
+  // Undo direction (remove last pair)
   const undoDirection = () => {
     if (currentRoute.length >= 2) {
       setCurrentRoute(currentRoute.slice(0, -2));
     }
   };
 
-  // 경로 초기화
+  // Clear route
   const clearRoute = () => {
     setCurrentRoute([]);
-  };
-
-  // 경로 표시 텍스트
-  const getRouteDisplay = () => {
-    if (currentRoute.length === 0) return '없음';
-
-    const robotColors = ['🔴', '🟢', '🔵', '🟡'];
-    const moves = [];
-    for (let i = 0; i < currentRoute.length; i += 2) {
-      const robotIdx = currentRoute[i];
-      const direction = currentRoute[i + 1];
-      const dirSymbol = direction === 8 ? '↑' : direction === 2 ? '↓' : direction === 4 ? '←' : '→';
-      moves.push(`${robotColors[robotIdx]}${dirSymbol}`);
-    }
-    return `${moves.join(' ')} (${currentRoute.length / 2} moves)`;
-  };
-
-  // Helper: check if cell has wall in direction
-  const hasWall = (wallBits, direction) => {
-    const WALL_NORTH = 1, WALL_SOUTH = 2, WALL_WEST = 4, WALL_EAST = 8;
-    const bit = direction === 'N' ? WALL_NORTH : direction === 'S' ? WALL_SOUTH :
-                direction === 'W' ? WALL_WEST : WALL_EAST;
-    return (wallBits & bit) !== 0;
-  };
-
-  // Simulate robot movement to get path traces and simulated positions
-  const simulateMovePath = () => {
-    if (!gameState || currentRoute.length === 0) {
-      return { paths: [], simulatedPositions: [...(gameState?.robotPositions || [])] };
-    }
-
-    const { mapSize, walls, robotPositions } = gameState;
-    const paths = []; // Array of {robotIdx, startPos, endPos, direction, positions[]}
-    let tempPositions = [...robotPositions];
-
-    for (let i = 0; i < currentRoute.length; i += 2) {
-      const robotIdx = currentRoute[i];
-      const direction = currentRoute[i + 1];
-
-      let currentPos = tempPositions[robotIdx]; // Use UPDATED position
-      const startPos = currentPos;
-      const positions = [];
-
-      // Simulate sliding
-      while (true) {
-        positions.push(currentPos);
-
-        const row = Math.floor(currentPos / mapSize);
-        const col = currentPos % mapSize;
-        const wallBits = walls[currentPos] || 0;
-
-        let canMove = false;
-        let nextPos = currentPos;
-
-        if (direction === 8) { // UP
-          canMove = row > 0 && !hasWall(wallBits, 'N');
-          nextPos = currentPos - mapSize;
-        } else if (direction === 2) { // DOWN
-          canMove = row < mapSize - 1 && !hasWall(wallBits, 'S');
-          nextPos = currentPos + mapSize;
-        } else if (direction === 4) { // LEFT
-          canMove = col > 0 && !hasWall(wallBits, 'W');
-          nextPos = currentPos - 1;
-        } else if (direction === 6) { // RIGHT
-          canMove = col < mapSize - 1 && !hasWall(wallBits, 'E');
-          nextPos = currentPos + 1;
-        }
-
-        if (!canMove) break;
-
-        // Check for other robots at CURRENT temporary positions
-        if (tempPositions.some((pos, idx) => idx !== robotIdx && pos === nextPos)) {
-          break;
-        }
-
-        currentPos = nextPos;
-      }
-
-      paths.push({
-        robotIdx,
-        startPos,
-        endPos: currentPos,
-        direction,
-        positions
-      });
-
-      // IMPORTANT: Update the robot's position for next iteration
-      tempPositions[robotIdx] = currentPos;
-    }
-
-    return { paths, simulatedPositions: tempPositions };
   };
 
   // Click to move robot to position
@@ -323,212 +179,20 @@ function App() {
     if (!gameState) return;
 
     const { mapSize } = gameState;
-
-    // Use simulated positions if there's an active route
-    const { simulatedPositions } = simulateMovePath();
+    const { simulatedPositions } = simulateMovePath(gameState, currentRoute);
     const currentPos = simulatedPositions[selectedRobot];
 
     if (currentPos === targetPos) return;
 
-    const currentRow = Math.floor(currentPos / mapSize);
-    const currentCol = currentPos % mapSize;
-    const targetRow = Math.floor(targetPos / mapSize);
-    const targetCol = targetPos % mapSize;
-
-    let direction = null;
-
-    // Determine direction based on which axis the target is on
-    if (targetCol === currentCol) {
-      // Same column - vertical movement
-      if (targetRow < currentRow) {
-        direction = 8; // UP
-      } else if (targetRow > currentRow) {
-        direction = 2; // DOWN
-      }
-    } else if (targetRow === currentRow) {
-      // Same row - horizontal movement
-      if (targetCol < currentCol) {
-        direction = 4; // LEFT
-      } else if (targetCol > currentCol) {
-        direction = 6; // RIGHT
-      }
-    }
+    const direction = getDirectionToTarget(currentPos, targetPos, mapSize);
 
     if (direction) {
       addDirection(direction);
     }
   };
 
-  // 게임 보드 렌더링 (Ricochet Robots style)
-  const renderGameBoard = () => {
-    if (!gameState) return null;
-
-    const { mapSize, walls, robotPositions, targetPosition, targetRobot } = gameState;
-    const cells = [];
-    const robotColors = ['🔴', '🟢', '🔵', '🟡'];
-    const { paths, simulatedPositions } = simulateMovePath();
-
-    // Build path map for rendering dotted lines
-    const pathCellMap = new Map(); // position -> {robotIdx, isHorizontal, isVertical}
-
-    paths.forEach(path => {
-      const isVertical = path.direction === 8 || path.direction === 2;
-      const isHorizontal = path.direction === 4 || path.direction === 6;
-
-      path.positions.forEach(pos => {
-        if (!pathCellMap.has(pos)) {
-          pathCellMap.set(pos, { robotIdx: path.robotIdx, isHorizontal, isVertical });
-        }
-      });
-    });
-
-    for (let i = 0; i < mapSize * mapSize; i++) {
-      let className = 'cell';
-      let content = '';
-      const wallBits = walls[i] || 0;
-
-      // Add wall classes
-      if (hasWall(wallBits, 'N')) className += ' wall-north';
-      if (hasWall(wallBits, 'S')) className += ' wall-south';
-      if (hasWall(wallBits, 'W')) className += ' wall-west';
-      if (hasWall(wallBits, 'E')) className += ' wall-east';
-
-      // Add path trace with dotted lines
-      if (pathCellMap.has(i)) {
-        const pathInfo = pathCellMap.get(i);
-        if (pathInfo.isHorizontal) {
-          className += ` path-trace-horizontal robot${pathInfo.robotIdx}`;
-        }
-        if (pathInfo.isVertical) {
-          className += ` path-trace-vertical robot${pathInfo.robotIdx}`;
-        }
-      }
-
-      // Show original robot positions as ghost (if they've moved)
-      const origRobotIdx = robotPositions.findIndex(pos => pos === i);
-      if (origRobotIdx !== -1 && robotPositions[origRobotIdx] !== simulatedPositions[origRobotIdx]) {
-        className += ` original-robot robot${origRobotIdx}`;
-      }
-
-      // Check for SIMULATED (current) robot positions
-      const simRobotIdx = simulatedPositions.findIndex(pos => pos === i);
-      if (simRobotIdx !== -1) {
-        className += ` robot robot${simRobotIdx}`;
-        if (simRobotIdx === selectedRobot) className += ' selected';
-        content = robotColors[simRobotIdx];
-      } else if (targetPosition === i) {
-        className += ' target';
-        content = robotColors[targetRobot] + '⭐';
-      }
-
-      cells.push(
-        <div
-          key={i}
-          className={className}
-          title={`Pos: ${i} (Row ${Math.floor(i / mapSize)}, Col ${i % mapSize})`}
-          onClick={() => {
-            // Click on simulated position to select robot
-            const clickedRobotIdx = simulatedPositions.findIndex(pos => pos === i);
-            if (clickedRobotIdx !== -1) {
-              setSelectedRobot(clickedRobotIdx);
-            } else {
-              handleCellClick(i);
-            }
-          }}
-        >
-          {content}
-        </div>
-      );
-    }
-
-    return (
-      <div
-        className="game-board"
-        style={{
-          gridTemplateColumns: `repeat(${mapSize}, 1fr)`,
-          gridTemplateRows: `repeat(${mapSize}, 1fr)`
-        }}
-      >
-        {cells}
-      </div>
-    );
-  };
-
-  // Render route history for each robot
-  const renderRouteHistory = () => {
-    if (!gameState) return null;
-
-    const { paths, simulatedPositions } = simulateMovePath();
-    const robotColors = ['🔴', '🟢', '🔵', '🟡'];
-    const robotNames = ['Red', 'Green', 'Blue', 'Yellow'];
-
-    return (
-      <div className="route-history">
-        <h3 style={{ marginBottom: '15px', color: '#667eea' }}>🗺️ Robot Routes</h3>
-        {[0, 1, 2, 3].map(robotIdx => {
-          const robotPaths = paths.filter(p => p.robotIdx === robotIdx);
-          const moves = robotPaths.length;
-          const startPos = gameState.robotPositions[robotIdx];
-          const endPos = simulatedPositions[robotIdx];
-
-          return (
-            <div
-              key={robotIdx}
-              style={{
-                padding: '12px',
-                marginBottom: '10px',
-                background: selectedRobot === robotIdx ? '#f0f0ff' : '#fff',
-                border: selectedRobot === robotIdx ? '2px solid #667eea' : '1px solid #e0e0e0',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onClick={() => setSelectedRobot(robotIdx)}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}>
-                  {robotColors[robotIdx]} {robotNames[robotIdx]}
-                </div>
-                <div style={{ fontSize: '0.9em', color: '#666' }}>
-                  {moves} {moves === 1 ? 'move' : 'moves'}
-                </div>
-              </div>
-              {robotPaths.length > 0 && (
-                <div style={{ fontSize: '0.85em', color: '#666', lineHeight: '1.5' }}>
-                  <div>Start: pos {startPos}</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', margin: '8px 0' }}>
-                    {robotPaths.map((path, idx) => {
-                      const dirSymbol = path.direction === 8 ? '↑' : path.direction === 2 ? '↓' :
-                                       path.direction === 4 ? '←' : '→';
-                      return (
-                        <span
-                          key={idx}
-                          style={{
-                            padding: '4px 8px',
-                            background: '#e8e8e8',
-                            borderRadius: '4px',
-                            fontSize: '0.9em'
-                          }}
-                        >
-                          {dirSymbol} → {path.endPos}
-                        </span>
-                      );
-                    })}
-                  </div>
-                  <div>End: pos {endPos}</div>
-                </div>
-              )}
-              {robotPaths.length === 0 && (
-                <div style={{ fontSize: '0.85em', color: '#999', fontStyle: 'italic' }}>
-                  No moves yet
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
+  // Get simulation data
+  const { paths, simulatedPositions } = simulateMovePath(gameState, currentRoute);
 
   return (
     <div style={{ padding: '15px', minHeight: '100vh', boxSizing: 'border-box' }}>
@@ -563,26 +227,7 @@ function App() {
             </div>
           )}
 
-          {routeSuccess && (
-            <div className="success-banner">
-              <div style={{ fontSize: '1.5em', marginBottom: '10px' }}>🎉 Solution Found!</div>
-              <div style={{ fontSize: '0.9em', lineHeight: '1.6' }}>
-                <div><strong>{['🔴 Red', '🟢 Green', '🔵 Blue', '🟡 Yellow'][routeSuccess.robotIdx]}</strong> reached target!</div>
-                <div>Moves: <strong>{routeSuccess.moves}</strong></div>
-                <div>Position: <strong>{routeSuccess.position}</strong></div>
-                {gameState.bestMoveCount < 255 && (
-                  <div style={{ marginTop: '8px', color: routeSuccess.moves < gameState.bestMoveCount ? '#28a745' : '#666' }}>
-                    {routeSuccess.moves < gameState.bestMoveCount ?
-                      `🏆 New best! (Previous: ${gameState.bestMoveCount})` :
-                      `Current best: ${gameState.bestMoveCount} moves`}
-                  </div>
-                )}
-                <div style={{ marginTop: '10px', fontSize: '0.85em', color: '#667eea' }}>
-                  ✅ Ready to submit to blockchain!
-                </div>
-              </div>
-            </div>
-          )}
+          <SuccessBanner routeSuccess={routeSuccess} gameState={gameState} />
 
           <div className="game-controls" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button onClick={createGame} disabled={!currentAccount}>
@@ -613,18 +258,10 @@ function App() {
             />
           </div>
 
-          {gameState && (
-            <div className="info-card">
-              <h3 style={{ fontSize: '1em' }}>📊 Game Info</h3>
-              <p style={{ fontSize: '0.85em' }}>Board: {gameState.mapSize}×{gameState.mapSize}</p>
-              <p style={{ fontSize: '0.85em' }}>Target: {['🔴', '🟢', '🔵', '🟡'][gameState.targetRobot]}</p>
-              <p style={{ fontSize: '0.85em' }}>Best: {gameState.bestMoveCount === 255 ? '-' : `${gameState.bestMoveCount}`}</p>
-              <p style={{ fontSize: '0.85em' }}>Winner: {gameState.winner !== null ? `P${gameState.winner + 1} 🏆` : 'In Progress'}</p>
-            </div>
-          )}
+          <GameInfo gameState={gameState} />
         </div>
 
-        {/* Center - Game Board */}
+        {/* Center - Game Board (Phaser) */}
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div className="legend" style={{ marginBottom: '10px' }}>
             <div className="legend-item"><span>🔴 Red</span></div>
@@ -634,62 +271,37 @@ function App() {
             <div className="legend-item"><span>⭐ Target</span></div>
           </div>
 
-          {renderGameBoard()}
+          <PhaserGame
+            gameState={gameState}
+            simulatedPositions={simulatedPositions}
+            paths={paths}
+            selectedRobot={selectedRobot}
+            onCellClick={handleCellClick}
+            onRobotSelect={setSelectedRobot}
+          />
 
           <div style={{ marginTop: '10px', padding: '8px 12px', background: '#f8f9fa', borderRadius: '8px', maxWidth: '700px', textAlign: 'center' }}>
             <div style={{ fontSize: '0.8em', color: '#666' }}>
-              Click robot • Click cell/arrow • Robots slide until blocked
+              Click robot • Click cell • Robots slide until blocked
             </div>
           </div>
         </div>
 
         {/* Right Sidebar - Route Builder & History */}
         <div style={{ width: '300px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div className="route-builder">
-            <h3 style={{ fontSize: '1.1em' }}>⚙️ Controls</h3>
-            <p style={{ fontSize: '0.85em', color: '#666', margin: '8px 0' }}>
-              Selected: <strong>{['🔴 Red', '🟢 Green', '🔵 Blue', '🟡 Yellow'][selectedRobot]}</strong>
-            </p>
+          <GameControls
+            getRouteDisplay={() => getRouteDisplay(currentRoute)}
+            onUndo={undoDirection}
+            onClear={clearRoute}
+          />
 
-            <div style={{ marginBottom: '12px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-              {[0, 1, 2, 3].map(idx => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedRobot(idx)}
-                  style={{
-                    padding: '10px',
-                    fontSize: '1.3em',
-                    background: selectedRobot === idx ? '#667eea' : '#e0e0e0',
-                    color: selectedRobot === idx ? 'white' : 'black',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {['🔴', '🟢', '🔵', '🟡'][idx]}
-                </button>
-              ))}
-            </div>
-
-            <div className="direction-buttons" style={{ maxWidth: '200px', margin: '0 auto' }}>
-              <button onClick={() => addDirection(8)}>⬆️</button>
-              <button onClick={() => addDirection(4)}>⬅️</button>
-              <button style={{ background: '#ccc' }} disabled>🏠</button>
-              <button onClick={() => addDirection(6)}>➡️</button>
-              <button onClick={() => addDirection(2)}>⬇️</button>
-            </div>
-
-            <div className="route-controls" style={{ marginTop: '12px' }}>
-              <button onClick={undoDirection} style={{ fontSize: '0.9em', padding: '8px 12px' }}>↩️ Undo</button>
-              <button onClick={clearRoute} style={{ fontSize: '0.9em', padding: '8px 12px' }}>🗑️ Clear</button>
-            </div>
-
-            <div style={{ marginTop: '12px', fontSize: '0.85em', color: '#666' }}>
-              <strong>Current:</strong> {getRouteDisplay()}
-            </div>
-          </div>
-
-          {renderRouteHistory()}
+          <RouteHistory
+            gameState={gameState}
+            paths={paths}
+            simulatedPositions={simulatedPositions}
+            selectedRobot={selectedRobot}
+            onRobotSelect={setSelectedRobot}
+          />
         </div>
       </div>
     </div>
