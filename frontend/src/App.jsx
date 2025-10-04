@@ -195,14 +195,23 @@ function App() {
   const { paths, simulatedPositions } = simulateMovePath(gameState, currentRoute);
 
   return (
-    <div style={{ padding: '15px', minHeight: '100vh', boxSizing: 'border-box' }}>
-      <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-        <h1 style={{ color: 'white', fontSize: '2em', margin: '0', textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
-          🤖 Ricochet Robots on Sui
-        </h1>
-      </div>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px'
+    }}>
+      <h1>Ricochet Robots on Sui</h1>
 
-      <div style={{ display: 'flex', gap: '15px', maxWidth: '1500px', margin: '0 auto', alignItems: 'flex-start' }}>
+      <div style={{
+        display: 'flex',
+        gap: '15px',
+        maxWidth: '1600px',
+        alignItems: 'flex-start',
+        justifyContent: 'center'
+      }}>
         {/* Left Sidebar - Game Info & Controls */}
         <div style={{ width: '260px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div className="wallet-section">

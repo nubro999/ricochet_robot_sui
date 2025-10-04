@@ -10,8 +10,10 @@ export const DIR_DOWN = 2;
 export const DIR_LEFT = 4;
 export const DIR_RIGHT = 6;
 
-export const ROBOT_COLORS = ['🔴', '🟢', '🔵', '🟡'];
+// Pixel art style representations
+export const ROBOT_COLORS = ['●', '●', '●', '●']; // Will be colored via CSS
 export const ROBOT_NAMES = ['Red', 'Green', 'Blue', 'Yellow'];
+export const ROBOT_PIXEL_COLORS = ['#ff4444', '#22cc22', '#4444ff', '#ffcc00'];
 
 // Check if cell has wall in direction
 export const hasWall = (wallBits, direction) => {
