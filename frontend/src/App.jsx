@@ -208,15 +208,16 @@ function App() {
         FIND THE MERBAE
       </h1>
 
-      <div style={{
+      <div className="game-layout" style={{
         display: 'flex',
         gap: '15px',
         maxWidth: '1600px',
+        width: '100%',
         alignItems: 'flex-start',
         justifyContent: 'center'
       }}>
         {/* Left Sidebar - Game Info & Controls */}
-        <div style={{ width: '260px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="sidebar sidebar-left" style={{ width: '260px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div className="wallet-section">
             <div className="wallet-info">
               {currentAccount ? (
@@ -282,13 +283,13 @@ function App() {
         </div>
 
         {/* Center - Game Board (Phaser) */}
-        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div className="game-board-container" style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div className="legend" style={{ marginBottom: '10px' }}>
           </div>
 
           {!gameState ? (
             // No game loaded - show info
-            <div style={{
+            <div className="welcome-screen" style={{
               width: '700px',
               height: '700px',
               background: '#31326F',
@@ -364,7 +365,7 @@ function App() {
                 onRobotSelect={setSelectedRobot}
               />
 
-              <div style={{ marginTop: '10px', padding: '8px 12px', background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', maxWidth: '700px', textAlign: 'center' }}>
+              <div style={{ marginTop: '10px', padding: '8px 12px', background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', width: '100%', maxWidth: '700px', textAlign: 'center' }}>
                 <div style={{ fontSize: '0.8em', color: '#A8FBD3' }}>
                   Click robot • Click cell • Robots slide until blocked
                 </div>
@@ -374,7 +375,7 @@ function App() {
         </div>
 
         {/* Right Sidebar - Route Builder & History */}
-        <div style={{ width: '300px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="sidebar sidebar-right" style={{ width: '300px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <GameControls
             getRouteDisplay={() => getRouteDisplay(currentRoute)}
             onUndo={undoDirection}

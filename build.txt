@@ -1,0 +1,8 @@
+npm run build (Vite 기준 dist 생성)
+scp로 서버 /tmp/dist에 업로드
+scp -i nubro.pem -r ./dist ubuntu@13.125.132.20:/tmp/dist 서버에서:
+sudo rsync -av /tmp/dist/ /usr/share/nginx/html/
+sudo chown -R www-data:www-data /usr/share/nginx/html
+sudo find /usr/share/nginx/html -type d -exec chmod 755 {} \;
+sudo find /usr/share/nginx/html -type f -exec chmod 644 {} \;
+sudo systemctl reload nginx

@@ -4,6 +4,15 @@
     box-sizing: border-box;
 }
 
+html {
+    overflow-x: hidden;
+}
+
+canvas {
+    max-width: 100% !important;
+    height: auto !important;
+}
+
 @font-face {
     font-family: 'PixelFont';
     src: url('data:font/woff2;base64,d09GMgABAAAAAAZQAA0AAAAAD...');
@@ -20,6 +29,7 @@ body {
     image-rendering: crisp-edges;
     -webkit-font-smoothing: none;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
 }
 
 body::before {
@@ -103,6 +113,9 @@ button {
     box-shadow: 3px 3px 0px #31326F;
     text-transform: uppercase;
     border-radius: 0;
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(79, 183, 179, 0.3);
 }
 
 button:hover:not(:disabled) {
@@ -115,6 +128,20 @@ button:hover:not(:disabled) {
 button:active:not(:disabled) {
     transform: translate(1px, 1px);
     box-shadow: 2px 2px 0px #31326F;
+}
+
+/* Touch feedback for mobile */
+@media (hover: none) and (pointer: coarse) {
+    button:hover:not(:disabled) {
+        transform: none;
+        box-shadow: 3px 3px 0px #31326F;
+    }
+
+    button:active:not(:disabled) {
+        background: #4FB7B3;
+        color: #31326F;
+        transform: scale(0.98);
+    }
 }
 
 button:disabled {
@@ -149,6 +176,8 @@ button:disabled {
     border: 2px solid #ddd;
     border-radius: 8px;
     font-size: 14px;
+    min-height: 44px;
+    touch-action: manipulation;
 }
 
 .input-group input:focus {
@@ -291,13 +320,233 @@ button:disabled {
     justify-content: center;
 }
 
+/* Mobile Responsive Styles */
+@media (max-width: 1200px) {
+    .game-layout {
+        flex-direction: column !important;
+        align-items: center !important;
+        padding: 0 10px !important;
+    }
+
+    .sidebar,
+    .game-board-container {
+        width: 100% !important;
+        max-width: 500px !important;
+    }
+
+    .sidebar-left,
+    .sidebar-right {
+        order: 2;
+    }
+
+    .game-board-container {
+        order: 1;
+        margin-bottom: 15px;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+
+    .welcome-screen {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 1 / 1 !important;
+        padding: 20px !important;
+        box-sizing: border-box !important;
+    }
+
+    #phaser-game,
+    #phaser-game > div,
+    #phaser-game canvas {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+    }
+}
+
 @media (max-width: 768px) {
+    body {
+        padding: 5px;
+    }
+
     h1 {
-        font-size: 1.5em !important;
+        font-size: 1.2em !important;
+        gap: 10px !important;
+        flex-direction: column !important;
+        margin-bottom: 15px !important;
+    }
+
+    h1 img {
+        width: 60px !important;
+        height: 60px !important;
+    }
+
+    .game-layout {
+        padding: 0 5px !important;
+    }
+
+    .sidebar {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    .game-board-container {
+        max-width: 100% !important;
+        width: 100% !important;
+        overflow: hidden;
+    }
+
+    .welcome-screen {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    #phaser-game {
+        max-width: 100% !important;
+        width: 100% !important;
     }
 
     .wallet-section {
         flex-direction: column;
         align-items: stretch;
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .wallet-info {
+        min-width: auto;
+    }
+
+    .game-controls {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    button {
+        padding: 12px 16px;
+        font-size: 10px;
+        width: 100%;
+        min-height: 48px;
+    }
+
+    .input-group {
+        margin-bottom: 10px;
+    }
+
+    .input-group input {
+        padding: 10px;
+        font-size: 12px;
+        min-height: 48px;
+    }
+
+    .info-card {
+        padding: 12px;
+    }
+
+    .info-card h3 {
+        font-size: 11px;
+    }
+
+    .info-card p {
+        font-size: 9px;
+    }
+
+    .route-builder,
+    .route-history {
+        padding: 12px;
+    }
+
+    .route-builder h3,
+    .route-history h3 {
+        font-size: 11px;
+    }
+
+    .route-controls {
+        gap: 8px;
+    }
+
+    .route-controls button {
+        font-size: 9px;
+        padding: 10px 12px;
+        min-height: 48px;
+    }
+
+    .route-history {
+        max-height: 300px;
+    }
+
+    .status-message {
+        padding: 10px;
+        font-size: 10px;
+    }
+
+    .legend {
+        gap: 10px;
+    }
+
+    .legend-item {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+
+    .legend-box {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 2px;
+    }
+
+    h1 {
+        font-size: 0.9em !important;
+        margin-bottom: 10px !important;
+    }
+
+    h1 img {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    .game-layout {
+        padding: 0 2px !important;
+    }
+
+    .sidebar,
+    .game-board-container {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    .welcome-screen,
+    #phaser-game {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    button {
+        padding: 10px 12px;
+        font-size: 9px;
+        min-height: 48px;
+    }
+
+    .wallet-section {
+        padding: 8px;
+    }
+
+    .info-card,
+    .route-builder,
+    .route-history {
+        padding: 10px;
+    }
+
+    .route-controls button {
+        font-size: 8px;
+        padding: 10px;
+        min-height: 48px;
     }
 }

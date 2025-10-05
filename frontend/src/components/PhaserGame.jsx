@@ -1,23 +1,44 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import GameScene from '../phaser/GameScene';
 
 function PhaserGame({ gameState, simulatedPositions, paths, selectedRobot, onCellClick, onRobotSelect }) {
   const gameRef = useRef(null);
   const sceneRef = useRef(null);
+  const containerRef = useRef(null);
+  const [gameSize, setGameSize] = useState({ width: 700, height: 700 });
+
+  // Handle responsive sizing
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        const size = Math.min(containerWidth, 700);
+        setGameSize({ width: size, height: size });
+
+        if (gameRef.current) {
+          gameRef.current.scale.resize(size, size);
+        }
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (!gameRef.current) {
       const config = {
         type: Phaser.WEBGL,
-        width: 700,
-        height: 700,
+        width: gameSize.width,
+        height: gameSize.height,
         parent: 'phaser-game',
         backgroundColor: 'rgba(0, 0, 0, 0.3)',
         transparent: true,
         scene: [GameScene],
         scale: {
-          mode: Phaser.Scale.NONE,
+          mode: Phaser.Scale.RESIZE,
         },
         render: {
           antialias: true,
@@ -51,15 +72,27 @@ function PhaserGame({ gameState, simulatedPositions, paths, selectedRobot, onCel
 
   return (
     <div
-      id="phaser-game"
+      ref={containerRef}
       style={{
-        width: '700px',
-        height: '700px',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
+        width: '100%',
+        maxWidth: '700px',
+        aspectRatio: '1 / 1',
+        margin: '0 auto'
       }}
-    />
+    >
+      <div
+        id="phaser-game"
+        style={{
+          width: '100%',
+          height: '100%',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+          maxWidth: '100%',
+          boxSizing: 'border-box'
+        }}
+      />
+    </div>
   );
 }
 

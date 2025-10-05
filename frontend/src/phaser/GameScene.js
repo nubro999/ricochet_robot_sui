@@ -106,11 +106,25 @@ export default class GameScene extends Phaser.Scene {
         this.simulatedPositions = [];
         this.paths = [];
         this.selectedRobot = 0;
-        this.cellSize = 43.75; // 700 / 16 = 43.75
+        this.cellSize = 43.75; // Will be recalculated on resize
         this.boardOffsetX = 0;
         this.boardOffsetY = 0;
         this.onCellClickCallback = null;
         this.onRobotSelectCallback = null;
+    }
+
+    resize(width, height) {
+        // Recalculate cell size based on current canvas size
+        const mapSize = this.gameState ? this.gameState.mapSize : 16;
+        const minDimension = Math.min(width, height);
+        this.cellSize = minDimension / mapSize;
+
+        // Center the board
+        this.boardOffsetX = (width - (mapSize * this.cellSize)) / 2;
+        this.boardOffsetY = (height - (mapSize * this.cellSize)) / 2;
+
+        // Trigger re-render
+        this.needsRender = true;
     }
 
     preload() {
@@ -135,6 +149,14 @@ export default class GameScene extends Phaser.Scene {
 
         // Initial render flag
         this.needsRender = true;
+
+        // Listen for scale resize events
+        this.scale.on('resize', (gameSize) => {
+            this.resize(gameSize.width, gameSize.height);
+        });
+
+        // Initial size calculation
+        this.resize(this.scale.width, this.scale.height);
     }
 
     update() {
