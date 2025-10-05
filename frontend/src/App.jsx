@@ -284,37 +284,93 @@ function App() {
         {/* Center - Game Board (Phaser) */}
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div className="legend" style={{ marginBottom: '10px' }}>
-            <div className="legend-item" style={{ background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', color: '#A8FBD3' }}>
-              <span>Red</span>
-            </div>
-            <div className="legend-item" style={{ background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', color: '#A8FBD3' }}>
-              <span>Green</span>
-            </div>
-            <div className="legend-item" style={{ background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', color: '#A8FBD3' }}>
-              <span>Blue</span>
-            </div>
-            <div className="legend-item" style={{ background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', color: '#A8FBD3' }}>
-              <span>Yellow</span>
-            </div>
-            <div className="legend-item" style={{ background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', color: '#A8FBD3' }}>
-              <span>Target</span>
-            </div>
           </div>
 
-          <PhaserGame
-            gameState={gameState}
-            simulatedPositions={simulatedPositions}
-            paths={paths}
-            selectedRobot={selectedRobot}
-            onCellClick={handleCellClick}
-            onRobotSelect={setSelectedRobot}
-          />
+          {!gameState ? (
+            // No game loaded - show info
+            <div style={{
+              width: '700px',
+              height: '700px',
+              background: '#31326F',
+              border: '4px solid #4FB7B3',
+              borderRadius: '0',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '40px',
+              padding: '40px',
+              boxShadow: '0 0 0 2px #31326F, 0 0 0 6px #637AB9'
+            }}>
+              <div style={{
+                fontSize: '2.5em',
+                color: '#A8FBD3',
+                textAlign: 'center',
+                textShadow: '3px 3px 0px #31326F, 4px 4px 0px #4FB7B3',
+                letterSpacing: '4px'
+              }}>
+                WELCOME
+              </div>
 
-          <div style={{ marginTop: '10px', padding: '8px 12px', background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', maxWidth: '700px', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.8em', color: '#A8FBD3' }}>
-              Click robot • Click cell • Robots slide until blocked
+              <div style={{ 
+                background: '#637AB9',
+                border: '3px solid #4FB7B3',
+                padding: '30px',
+                width: '100%',
+                maxWidth: '500px'
+              }}>
+                <div style={{ fontSize: '1em', color: '#A8FBD3', textAlign: 'center', lineHeight: '2' }}>
+                  <div style={{ marginBottom: '25px', fontSize: '1.1em', color: '#A8FBD3' }}>
+                    [[ Ricochet Robots on Sui ]]
+                  </div>
+
+                  <div style={{ fontSize: '0.9em', color: '#4FB7B3', marginBottom: '20px' }}>
+                    --- CHARACTERS ---
+                  </div>
+
+                  <div style={{ fontSize: '0.85em', color: '#A8FBD3', marginBottom: '5px' }}>
+                    [ RED ] OCTOPUS
+                  </div>
+                  <div style={{ fontSize: '0.85em', color: '#A8FBD3', marginBottom: '5px' }}>
+                    [ GREEN ] TURTLE
+                  </div>
+                  <div style={{ fontSize: '0.85em', color: '#A8FBD3', marginBottom: '5px' }}>
+                    [ BLUE ] FISH
+                  </div>
+                  <div style={{ fontSize: '0.85em', color: '#A8FBD3', marginBottom: '25px' }}>
+                    [ YELLOW ] STARFISH
+                  </div>
+
+                  <div style={{
+                    fontSize: '0.75em',
+                    color: '#A8FBD3',
+                    border: '2px solid #4FB7B3',
+                    padding: '10px',
+                    background: '#31326F'
+                  }}>
+                    &gt;&gt; PRESS NEW GAME TO START &lt;&lt;
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <PhaserGame
+                gameState={gameState}
+                simulatedPositions={simulatedPositions}
+                paths={paths}
+                selectedRobot={selectedRobot}
+                onCellClick={handleCellClick}
+                onRobotSelect={setSelectedRobot}
+              />
+
+              <div style={{ marginTop: '10px', padding: '8px 12px', background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', maxWidth: '700px', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.8em', color: '#A8FBD3' }}>
+                  Click robot • Click cell • Robots slide until blocked
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Right Sidebar - Route Builder & History */}
