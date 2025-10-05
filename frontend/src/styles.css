@@ -11,13 +11,15 @@
 
 body {
     font-family: 'Press Start 2P', 'Courier New', monospace;
-    background-color: #001a33;
+    background-color: #31326F;
     min-height: 100vh;
     padding: 20px;
     position: relative;
     image-rendering: pixelated;
     image-rendering: -moz-crisp-edges;
     image-rendering: crisp-edges;
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 body::before {
@@ -39,7 +41,7 @@ body::after {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(rgba(0, 10, 30, 0.4), rgba(0, 20, 50, 0.6));
+    background: linear-gradient(rgba(49, 50, 111, 0.5), rgba(49, 50, 111, 0.7));
     z-index: -1;
 }
 
@@ -47,12 +49,12 @@ body::after {
 
 h1 {
     text-align: center;
-    color: #00ffff;
+    color: #A8FBD3;
     margin-bottom: 20px;
     font-size: 1.5em;
     text-shadow:
-        2px 2px 0px #0088ff,
-        4px 4px 0px #000;
+        2px 2px 0px #4FB7B3,
+        4px 4px 0px #31326F;
     letter-spacing: 2px;
 }
 
@@ -63,8 +65,8 @@ h1 {
 }
 
 .wallet-section {
-    background: #1a1a3e;
-    border: 4px solid #00ffff;
+    background: #31326F;
+    border: 3px solid #4FB7B3;
     padding: 15px;
     margin-bottom: 20px;
     display: flex;
@@ -72,7 +74,8 @@ h1 {
     align-items: center;
     flex-wrap: wrap;
     gap: 15px;
-    box-shadow: 4px 4px 0px #000;
+    box-shadow: 3px 3px 0px #000;
+    border-radius: 0;
 }
 
 .wallet-info {
@@ -81,42 +84,43 @@ h1 {
 }
 
 .wallet-address {
-    color: #333;
+    color: #A8FBD3;
     font-weight: bold;
     word-break: break-all;
     font-size: 14px;
 }
 
 button {
-    background: #0088ff;
-    color: #fff;
-    border: 4px solid #00ffff;
+    background: #637AB9;
+    color: #A8FBD3;
+    border: 3px solid #4FB7B3;
     padding: 12px 24px;
     cursor: pointer;
     font-size: 12px;
     font-family: 'Press Start 2P', 'Courier New', monospace;
     font-weight: normal;
     transition: all 0.1s;
-    box-shadow: 4px 4px 0px #000;
+    box-shadow: 3px 3px 0px #31326F;
     text-transform: uppercase;
+    border-radius: 0;
 }
 
 button:hover:not(:disabled) {
-    background: #00ffff;
-    color: #000;
-    transform: translate(-2px, -2px);
-    box-shadow: 6px 6px 0px #000;
+    background: #4FB7B3;
+    color: #31326F;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px #31326F;
 }
 
 button:active:not(:disabled) {
-    transform: translate(2px, 2px);
-    box-shadow: 2px 2px 0px #000;
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0px #31326F;
 }
 
 button:disabled {
-    background: #444;
-    border-color: #666;
-    color: #888;
+    background: #31326F;
+    border-color: #637AB9;
+    color: #637AB9;
     cursor: not-allowed;
     transform: none;
 }
@@ -160,42 +164,45 @@ button:disabled {
 }
 
 .info-card {
-    background: #1a1a3e;
-    border: 4px solid #ff00ff;
+    background: #31326F;
+    border: 3px solid #4FB7B3;
     padding: 15px;
-    box-shadow: 4px 4px 0px #000;
+    box-shadow: 3px 3px 0px #000;
+    border-radius: 0;
 }
 
 .info-card h3 {
-    color: #ff00ff;
+    color: #A8FBD3;
     margin-bottom: 10px;
     font-size: 12px;
 }
 
 .info-card p {
-    color: #00ffff;
+    color: #4FB7B3;
     margin: 5px 0;
     font-size: 10px;
 }
 
 .route-builder {
-    background: #1a1a3e;
-    border: 4px solid #00ff00;
+    background: #31326F;
+    border: 3px solid #A8FBD3;
     padding: 15px;
-    box-shadow: 4px 4px 0px #000;
+    box-shadow: 3px 3px 0px #000;
+    border-radius: 0;
 }
 
 .route-history {
-    background: #1a1a3e;
-    border: 4px solid #ffff00;
+    background: #31326F;
+    border: 3px solid #A8FBD3;
     padding: 15px;
     max-height: 500px;
     overflow-y: auto;
-    box-shadow: 4px 4px 0px #000;
+    box-shadow: 3px 3px 0px #000;
+    border-radius: 0;
 }
 
 .route-builder h3 {
-    color: #00ff00;
+    color: #A8FBD3;
     margin-bottom: 15px;
     font-size: 12px;
 }

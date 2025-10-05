@@ -503,12 +503,15 @@ module reco::game {
     }
 
     /// 랜덤 로봇 위치 생성 (최적화)
-    fun generate_random_robot_positions(generator: &mut random::RandomGenerator, _map_size: u8): vector<u8> {
+    fun generate_random_robot_positions(generator: &mut random::RandomGenerator, map_size: u8): vector<u8> {
         let mut positions = vector::empty<u8>();
 
         let mut i = 0;
         while (i < 4) {
             let pos = random::generate_u8_in_range(generator, 0, 255);
+
+            // Skip if inside center square (4x4 area from 6,6 to 9,9)
+            if (is_inside_center_square(pos, map_size)) continue;
 
             // Check if position is unique
             let mut is_unique = true;

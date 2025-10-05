@@ -53,16 +53,16 @@ function App() {
   // Create game
   const createGame = () => {
     if (!currentAccount) {
-      showStatus('먼저 지갑을 연결해주세요', 'error');
+      showStatus('Please connect your wallet first', 'error');
       return;
     }
 
     if (CONFIG.PACKAGE_ID === 'YOUR_PACKAGE_ID_HERE') {
-      showStatus('config.js에서 PACKAGE_ID를 설정해주세요!', 'error');
+      showStatus('Please set PACKAGE_ID in config.js!', 'error');
       return;
     }
 
-    showStatus('게임 생성 중...', 'info');
+    showStatus('Creating game...', 'info');
 
     const tx = createGameTransaction();
 
@@ -77,19 +77,19 @@ function App() {
 
             if (gameId) {
               setGameObjectId(gameId);
-              showStatus('✅ 게임이 생성되었습니다! ID: ' + gameId.slice(0, 8) + '...', 'success');
+              showStatus('Game created! ID: ' + gameId.slice(0, 8) + '...', 'success');
               setTimeout(() => loadGame(gameId), 2000);
             } else {
-              showStatus('게임 객체를 찾을 수 없습니다', 'error');
+              showStatus('Game object not found', 'error');
             }
           } catch (error) {
-            console.error('트랜잭션 조회 오류:', error);
-            showStatus('트랜잭션 조회 실패: ' + error.message, 'error');
+            console.error('Transaction query error:', error);
+            showStatus('Transaction query failed: ' + error.message, 'error');
           }
         },
         onError: (error) => {
-          console.error('게임 생성 오류:', error);
-          showStatus('게임 생성 실패: ' + error.message, 'error');
+          console.error('Game creation error:', error);
+          showStatus('Game creation failed: ' + error.message, 'error');
         },
       }
     );
@@ -98,22 +98,22 @@ function App() {
   // Load game
   const loadGame = async (gameId) => {
     if (!gameId) {
-      showStatus('게임 ID를 입력해주세요', 'error');
+      showStatus('Please enter game ID', 'error');
       return;
     }
 
     try {
-      showStatus('게임 불러오는 중...', 'info');
+      showStatus('Loading game...', 'info');
       const state = await loadGameFromBlockchain(suiClient, gameId);
 
       if (state) {
         setGameState(state);
-        showStatus('✅ 게임을 불러왔습니다!', 'success');
+        showStatus('Game loaded!', 'success');
       } else {
-        showStatus('게임 데이터를 파싱할 수 없습니다', 'error');
+        showStatus('Cannot parse game data', 'error');
       }
     } catch (error) {
-      showStatus('게임 불러오기 실패: ' + error.message, 'error');
+      showStatus('Failed to load game: ' + error.message, 'error');
       console.error(error);
     }
   };
@@ -121,21 +121,21 @@ function App() {
   // Submit route
   const submitRoute = () => {
     if (!currentAccount) {
-      showStatus('먼저 지갑을 연결해주세요', 'error');
+      showStatus('Please connect your wallet first', 'error');
       return;
     }
 
     if (currentRoute.length === 0) {
-      showStatus('경로를 만들어주세요', 'error');
+      showStatus('Please create a route', 'error');
       return;
     }
 
     if (!gameObjectId) {
-      showStatus('게임 ID를 입력해주세요', 'error');
+      showStatus('Please enter game ID', 'error');
       return;
     }
 
-    showStatus('경로 제출 중...', 'info');
+    showStatus('Submitting route...', 'info');
 
     const tx = submitRouteTransaction(gameObjectId, currentRoute);
 
@@ -144,13 +144,13 @@ function App() {
       {
         onSuccess: (result) => {
           console.log('Submit result:', result);
-          showStatus('✅ 경로가 제출되었습니다!', 'success');
+          showStatus('Route submitted!', 'success');
           setCurrentRoute([]);
           setTimeout(() => loadGame(gameObjectId), 2000);
         },
         onError: (error) => {
-          console.error('경로 제출 오류:', error);
-          showStatus('경로 제출 실패: ' + error.message, 'error');
+          console.error('Route submission error:', error);
+          showStatus('Route submission failed: ' + error.message, 'error');
         },
       }
     );
@@ -203,7 +203,10 @@ function App() {
       justifyContent: 'center',
       padding: '20px'
     }}>
-      <h1>Ricochet Robots on Sui</h1>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '3em' }}>
+        <img src="/logo.png" alt="Logo" style={{ width: '120px', height: '120px', imageRendering: 'pixelated' }} />
+        FIND THE MERBAE
+      </h1>
 
       <div style={{
         display: 'flex',
@@ -218,13 +221,13 @@ function App() {
             <div className="wallet-info">
               {currentAccount ? (
                 <>
-                  <div style={{ color: '#28a745', fontWeight: 'bold', fontSize: '0.9em' }}>✅ Connected</div>
+                  <div style={{ color: '#A8FBD3', fontWeight: 'bold', fontSize: '0.9em' }}>Connected</div>
                   <div className="wallet-address" style={{ fontSize: '0.75em' }}>
                     {currentAccount.address.slice(0, 8)}...{currentAccount.address.slice(-6)}
                   </div>
                 </>
               ) : (
-                <div style={{ color: '#666', fontSize: '0.9em' }}>❌ Not Connected</div>
+                <div style={{ color: '#637AB9', fontSize: '0.9em' }}>Not Connected</div>
               )}
             </div>
             <ConnectButton />
@@ -240,30 +243,38 @@ function App() {
 
           <div className="game-controls" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button onClick={createGame} disabled={!currentAccount}>
-              🎲 New Game
+              NEW GAME
             </button>
             <button onClick={() => loadGame(gameObjectId)} disabled={!gameObjectId}>
-              📥 Load Game
+              LOAD GAME
             </button>
             <button
               onClick={submitRoute}
               disabled={!currentAccount || !gameObjectId || currentRoute.length === 0}
               style={{
-                background: currentRoute.length > 0 ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#ccc'
+                background: currentRoute.length > 0 ? '#4FB7B3' : '#31326F',
+                color: currentRoute.length > 0 ? '#31326F' : '#637AB9'
               }}
             >
-              ✅ Submit Route
+              SUBMIT ROUTE
             </button>
           </div>
 
           <div className="input-group">
-            <label style={{ fontSize: '0.85em' }}>Game ID:</label>
+            <label style={{ fontSize: '0.85em', color: '#A8FBD3' }}>Game ID:</label>
             <input
               type="text"
               value={gameObjectId}
               onChange={(e) => setGameObjectId(e.target.value)}
               placeholder="Auto-filled"
-              style={{ fontSize: '0.75em' }}
+              style={{
+                fontSize: '0.75em',
+                background: '#31326F',
+                border: '2px solid #4FB7B3',
+                borderRadius: '0',
+                color: '#A8FBD3',
+                padding: '8px'
+              }}
             />
           </div>
 
@@ -273,11 +284,21 @@ function App() {
         {/* Center - Game Board (Phaser) */}
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div className="legend" style={{ marginBottom: '10px' }}>
-            <div className="legend-item"><span>🔴 Red</span></div>
-            <div className="legend-item"><span>🟢 Green</span></div>
-            <div className="legend-item"><span>🔵 Blue</span></div>
-            <div className="legend-item"><span>🟡 Yellow</span></div>
-            <div className="legend-item"><span>⭐ Target</span></div>
+            <div className="legend-item" style={{ background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', color: '#A8FBD3' }}>
+              <span>Red</span>
+            </div>
+            <div className="legend-item" style={{ background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', color: '#A8FBD3' }}>
+              <span>Green</span>
+            </div>
+            <div className="legend-item" style={{ background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', color: '#A8FBD3' }}>
+              <span>Blue</span>
+            </div>
+            <div className="legend-item" style={{ background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', color: '#A8FBD3' }}>
+              <span>Yellow</span>
+            </div>
+            <div className="legend-item" style={{ background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', color: '#A8FBD3' }}>
+              <span>Target</span>
+            </div>
           </div>
 
           <PhaserGame
@@ -289,8 +310,8 @@ function App() {
             onRobotSelect={setSelectedRobot}
           />
 
-          <div style={{ marginTop: '10px', padding: '8px 12px', background: '#f8f9fa', borderRadius: '8px', maxWidth: '700px', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.8em', color: '#666' }}>
+          <div style={{ marginTop: '10px', padding: '8px 12px', background: '#31326F', border: '2px solid #4FB7B3', borderRadius: '0', maxWidth: '700px', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.8em', color: '#A8FBD3' }}>
               Click robot • Click cell • Robots slide until blocked
             </div>
           </div>
